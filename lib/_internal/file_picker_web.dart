@@ -53,7 +53,7 @@ class FilePickerWeb extends FilePicker {
     }
 
     final Completer<List<PlatformFile>?> filesCompleter =
-        Completer<List<PlatformFile>?>();
+    Completer<List<PlatformFile>?>();
 
     String accept = _fileType(type, allowedExtensions);
     InputElement uploadInput = FileUploadInputElement() as InputElement;
@@ -78,11 +78,11 @@ class FilePickerWeb extends FilePicker {
       final List<PlatformFile> pickedFiles = [];
 
       void addPickedFile(
-        File file,
-        Uint8List? bytes,
-        String? path,
-        Stream<List<int>>? readStream,
-      ) {
+          File file,
+          Uint8List? bytes,
+          String? path,
+          Stream<List<int>>? readStream,
+          ) {
         pickedFiles.add(PlatformFile(
           name: file.name,
           path: path,
@@ -110,6 +110,9 @@ class FilePickerWeb extends FilePicker {
           reader.onLoadEnd.listen((e) {
             addPickedFile(file, null, reader.result as String?, null);
           });
+          reader.onError.listen((e){
+            print("error ${e.toString()}");
+          });
           reader.readAsDataUrl(file);
           continue;
         }
@@ -117,6 +120,12 @@ class FilePickerWeb extends FilePicker {
         final FileReader reader = FileReader();
         reader.onLoadEnd.listen((e) {
           addPickedFile(file, reader.result as Uint8List?, null, null);
+        });
+        reader.onError.listen((e){
+          print("error ${e.toString()}");
+        });
+        reader.onAbort.listen((e){
+          print("onAbort ${e.toString()}");
         });
         reader.readAsArrayBuffer(file);
       }
@@ -128,7 +137,7 @@ class FilePickerWeb extends FilePicker {
       // This listener is called before the input changed event,
       // and the `uploadInput.files` value is still null
       // Wait for results from js to dart
-      Future.delayed(Duration(milliseconds: 500)).then((value) {
+      Future.delayed(Duration(seconds: 500)).then((value) {
         if (!changeEventTriggered) {
           changeEventTriggered = true;
           filesCompleter.complete(null);
@@ -136,16 +145,18 @@ class FilePickerWeb extends FilePicker {
       });
     }
 
-    uploadInput.onChange.listen(changeEventListener);
-    uploadInput.addEventListener('change', changeEventListener);
 
-    // Listen focus event for cancelled
-    window.addEventListener('focus', cancelledEventListener);
 
     //Add input element to the page body
     _target.children.clear();
     _target.children.add(uploadInput);
     uploadInput.click();
+
+    uploadInput.onChange.listen(changeEventListener);
+    uploadInput.addEventListener('change', changeEventListener);
+
+    // Listen focus event for cancelled
+    window.addEventListener('focus', cancelledEventListener);
 
     final List<PlatformFile>? files = await filesCompleter.future;
 
